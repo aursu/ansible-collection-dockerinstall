@@ -1,0 +1,30 @@
+---
+- name: Refuse a platform this role does not cover yet
+  ansible.builtin.assert:
+    that: ansible_facts.os_family == 'Debian'
+    fail_msg: "aursu.dockerinstall.docker supports Debian and Ubuntu only, not {{ ansible_facts.distribution }}"
+    quiet: true
+
+# The rule for a valid package specification lives in aursu.general, shared
+# with the other collections that install packages; on failure the message
+# names the variable and the offending package.
+- name: Refuse unpinned or malformed package specifications
+  ansible.builtin.assert:
+    that:
+      - docker_packages | aursu.general.validate_package_pins('docker_packages')
+      - docker_prerequisite_packages | aursu.general.validate_package_names('docker_prerequisite_packages')
+    quiet: true
+
+- name: Ensure the tools this role's modules need are installed
+  ansible.builtin.apt:
+    name: "{{ docker_prerequisite_packages }}"
+    state: present
+
+- name: Docker apt repository
+  ansible.builtin.import_tasks: repository.yml
+
+- name: Docker packages and service
+  ansible.builtin.import_tasks: packages.yml
+
+- name: Docker daemon configuration
+  ansible.builtin.import_tasks: daemon.yml

@@ -1,0 +1,19 @@
+---
+# The key ships with the role (files/docker.asc), so a run downloads nothing
+# to trust and a key change shows up in review.
+- name: Add the Docker apt repository, signed by the key shipped with this role
+  ansible.builtin.deb822_repository:
+    name: docker
+    types: deb
+    uris: "{{ docker_repo_url }}"
+    suites: "{{ ansible_facts.distribution_release }}"
+    components: "{{ docker_repo_components }}"
+    architectures: "{{ docker_repo_architectures }}"
+    signed_by: "{{ lookup('ansible.builtin.file', 'docker.asc') }}"
+  notify: Refresh the apt cache
+
+# Now, not at the end of the play: the packages below come from this
+# repository, and cache_valid_time alone would skip the update right after it
+# appears.
+- name: Refresh the apt cache before installing from the new repository
+  ansible.builtin.meta: flush_handlers
