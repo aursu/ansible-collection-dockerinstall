@@ -1,0 +1,11 @@
+# macOS Finder metadata
+.DS_Store
+
+# Python bytecode and test residue
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Collection build output; pytest-ansible's collection path
+dist/
+collections/ansible_collections
