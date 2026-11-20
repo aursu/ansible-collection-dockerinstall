@@ -5,12 +5,14 @@
     fail_msg: "aursu.dockerinstall.docker supports Debian and Ubuntu only, not {{ ansible_facts.distribution }}"
     quiet: true
 
-- name: Refuse unpinned packages
+# The rule for a valid package specification lives in aursu.general, shared
+# with the other collections that install packages; on failure the message
+# names the variable and the offending package.
+- name: Refuse unpinned or malformed package specifications
   ansible.builtin.assert:
     that:
-      - docker_packages | length > 0
-      - docker_packages.values() | select('string') | select | list | length == docker_packages | length
-    fail_msg: "docker_packages must map each package to an exact version string"
+      - docker_packages | aursu.general.validate_package_pins('docker_packages')
+      - docker_prerequisite_packages | aursu.general.validate_package_names('docker_prerequisite_packages')
     quiet: true
 
 - name: Ensure the tools this role's modules need are installed

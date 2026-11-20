@@ -8,4 +8,4 @@ the daemon configuration - the Ansible counterpart of the Puppet module
 |---|---|---|
 | role | `docker` | Repository (key shipped with the role), pinned and held packages, `daemon.json` owned whole. See `roles/docker/README.md`. |
 
-Debian and Ubuntu for now.
+Requires `aursu.general >= 1.9.0` (package-specification filters). Debian and Ubuntu for now.

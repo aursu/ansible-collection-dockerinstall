@@ -8,7 +8,7 @@ owned whole by the role. Debian and Ubuntu.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `docker_packages` | `{}` - **required** | Package → exact apt version. The role refuses an empty map. |
+| `docker_packages` | `{}` - **required** | Package → exact apt version, each a quoted string. The role refuses an empty map, a missing version and an unquoted one (`aursu.general.validate_package_pins`). |
 | `docker_daemon_config` | `{log-driver: local, live-restore: true}` | The whole `daemon.json`. Keys not listed are not kept. |
 | `docker_prerequisite_packages` | `[python3-debian]` | Installed first; `deb822_repository` needs it. |
 | `docker_repo_url` | `https://download.docker.com/linux/<distribution>` | Repository base. |

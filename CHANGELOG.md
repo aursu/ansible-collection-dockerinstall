@@ -18,6 +18,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
     `log-driver: local`, `live-restore: true`), validated with
     `dockerd --validate` before it is written, and a change restarts the daemon.
   - Installs `python3-debian` first, which `deb822_repository` needs.
+  - Package specifications are checked with `aursu.general.validate_package_pins` and
+    `validate_package_names` (hence `aursu.general >= 1.9.0`): an unquoted YAML version or an
+    empty one is refused, and the message names the package.
   - The apt cache is refreshed by a handler flushed right after the repository
     appears, before the packages are installed from it.
 
