@@ -1,0 +1,21 @@
+---
+- name: Install the pinned Docker packages
+  ansible.builtin.apt:
+    name: "{{ docker_packages.items() | map('join', '=') | list }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+    allow_change_held_packages: true
+
+# Held, so a plain `apt upgrade` cannot move them: versions change only here.
+- name: Hold the Docker packages at their pinned versions
+  ansible.builtin.dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop: "{{ docker_packages.keys() | list }}"
+
+- name: Run Docker and start it at boot
+  ansible.builtin.systemd_service:
+    name: docker
+    enabled: true
+    state: started

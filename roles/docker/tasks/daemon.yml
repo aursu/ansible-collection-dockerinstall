@@ -1,0 +1,12 @@
+---
+# Owned whole: the content is docker_daemon_config and nothing else. dockerd
+# validates the candidate before it replaces the live file.
+- name: Write /etc/docker/daemon.json
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    content: "{{ docker_daemon_config | to_nice_json }}\n"
+    owner: root
+    group: root
+    mode: "0644"
+    validate: dockerd --validate --config-file %s
+  notify: Restart docker
