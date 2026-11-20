@@ -26,5 +26,15 @@
 - name: Docker packages and service
   ansible.builtin.import_tasks: packages.yml
 
+# Before daemon.yml: the TLS files must exist when dockerd validates the
+# flags that name them.
+- name: Docker API TLS files
+  ansible.builtin.import_tasks: tls.yml
+
 - name: Docker daemon configuration
   ansible.builtin.import_tasks: daemon.yml
+
+# Last: the listener appears only after its files and flags passed validation.
+- name: Docker API TLS listener
+  ansible.builtin.import_tasks: tls_listener.yml
+  when: docker_tls_hosts | length > 0

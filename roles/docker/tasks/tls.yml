@@ -1,0 +1,63 @@
+---
+- name: Refuse hosts or TLS settings in daemon.json, and a listener without its certificates
+  ansible.builtin.assert:
+    that:
+      - docker_daemon_config.keys() | intersect(['hosts', 'tls', 'tlsverify', 'tlscacert', 'tlscert', 'tlskey']) | length == 0
+      - >-
+        docker_tls_hosts | length == 0 or (docker_tls_ca_cert | length > 0
+        and docker_tls_server_cert | length > 0 and docker_tls_server_key | length > 0)
+    fail_msg: >-
+      Listen addresses and TLS settings come from docker_tls_hosts (flags), never from docker_daemon_config;
+      docker_tls_hosts needs docker_tls_ca_cert, docker_tls_server_cert and docker_tls_server_key.
+    quiet: true
+
+# The files first: the drop-in that uses them comes after daemon.yml has
+# validated them (tls_listener.yml).
+- name: TLS files
+  when: docker_tls_hosts | length > 0
+  block:
+    - name: Directory for the TLS files
+      ansible.builtin.file:
+        path: "{{ docker_tls_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: CA and server certificates
+      ansible.builtin.copy:
+        dest: "{{ item.dest }}"
+        content: "{{ item.content }}"
+        owner: root
+        group: root
+        mode: "0644"
+      loop:
+        - {dest: "{{ docker_tls_files.ca }}", content: "{{ docker_tls_ca_cert }}"}
+        - {dest: "{{ docker_tls_files.cert }}", content: "{{ docker_tls_server_cert }}"}
+      loop_control:
+        label: "{{ item.dest }}"
+      notify: Restart docker
+
+    - name: Server private key
+      ansible.builtin.copy:
+        dest: "{{ docker_tls_files.key }}"
+        content: "{{ docker_tls_server_key }}"
+        owner: root
+        group: root
+        mode: "0600"
+      no_log: true
+      notify: Restart docker
+
+# Socket only, which is also the way back: the drop-in goes first, so no
+# state has a listener whose TLS files are already gone.
+- name: No TLS listener
+  when: docker_tls_hosts | length == 0
+  block:
+    - name: Remove the listener's drop-in and TLS files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/systemd/system/docker.service.d/tls-listener.conf
+        - "{{ docker_tls_dir }}"
+      notify: Restart docker

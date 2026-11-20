@@ -1,0 +1,17 @@
+---
+- name: Directory for docker.service drop-ins
+  ansible.builtin.file:
+    path: /etc/systemd/system/docker.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Drop-in that adds the TLS hosts and settings to dockerd
+  ansible.builtin.template:
+    src: tls-listener.conf.j2
+    dest: /etc/systemd/system/docker.service.d/tls-listener.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart docker
