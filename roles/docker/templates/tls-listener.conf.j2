@@ -1,0 +1,6 @@
+# {{ ansible_managed }}
+# aursu.dockerinstall: the packaged ExecStart with the TLS hosts and their TLS
+# settings added (docker_tls_hosts); socket activation (fd://) is kept.
+[Service]
+ExecStart=
+ExecStart=/usr/bin/dockerd {{ docker_dockerd_flags | join(' ') }}

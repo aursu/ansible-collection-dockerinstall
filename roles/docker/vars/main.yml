@@ -1,0 +1,22 @@
+---
+docker_tls_files:
+  ca: "{{ docker_tls_dir }}/ca.pem"
+  cert: "{{ docker_tls_dir }}/server.pem"
+  key: "{{ docker_tls_dir }}/server-key.pem"
+
+# The TCP hosts and their TLS settings are flags of one drop-in, never split
+# between flags and daemon.json: dockerd accepts a TCP host without TLS, so a
+# listener must never exist without the settings that protect it.
+docker_dockerd_tls_flags:
+  - --tlsverify
+  - --tlscacert={{ docker_tls_files.ca }}
+  - --tlscert={{ docker_tls_files.cert }}
+  - --tlskey={{ docker_tls_files.key }}
+
+# dockerd's arguments: the packaged unit's (docker-ce 29.x: socket activation
+# and containerd), plus the TLS hosts and settings when there are any. The
+# drop-in runs them; dockerd --validate checks daemon.json against them.
+docker_dockerd_flags: >-
+  {{ (['fd://'] + docker_tls_hosts) | map('regex_replace', '^', '--host=') | list
+     + (docker_dockerd_tls_flags if docker_tls_hosts else [])
+     + ['--containerd=/run/containerd/containerd.sock'] }}

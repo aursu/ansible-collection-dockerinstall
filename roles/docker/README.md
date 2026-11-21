@@ -2,7 +2,8 @@
 
 Docker Engine from the official repository (`download.docker.com`), with every
 package pinned to an exact version and held, and `/etc/docker/daemon.json`
-owned whole by the role. Debian and Ubuntu.
+owned whole by the role; optionally the API on TCP with mutual TLS. Debian and
+Ubuntu.
 
 ## Variables
 
@@ -14,6 +15,11 @@ owned whole by the role. Debian and Ubuntu.
 | `docker_repo_url` | `https://download.docker.com/linux/<distribution>` | Repository base. |
 | `docker_repo_components` | `[stable]` | |
 | `docker_repo_architectures` | `[amd64]` | |
+| `docker_tls_hosts` | `[]` | TCP addresses of the API, each a dockerd `-H` value (`tcp://192.168.50.2:2376`). Empty: socket only, and the role removes its listener. |
+| `docker_tls_ca_cert` | `""` | PEM of the CA whose client certificates are let in. Required with `docker_tls_hosts`. |
+| `docker_tls_server_cert` | `""` | PEM of this host's server certificate. Required with `docker_tls_hosts`. |
+| `docker_tls_server_key` | `""` | PEM of its private key; written `0600 root`, never logged. Required with `docker_tls_hosts`. |
+| `docker_tls_dir` | `/etc/docker/tls` | Where `ca.pem`, `server.pem`, `server-key.pem` are written. |
 
 ```yaml
 docker_packages:
@@ -42,5 +48,35 @@ docker_packages:
   The module's `install_python_debian` would install it even in check mode,
   which a dry run must not do.
 
-Not here (yet): the TLS listener for the API, users and groups, daemon flags
-outside `daemon.json`.
+## TLS listener
+
+```yaml
+docker_tls_hosts:
+  - tcp://192.168.50.2:2376
+docker_tls_ca_cert: "{{ lookup('ansible.builtin.file', 'ca.pem') }}"
+docker_tls_server_cert: "{{ lookup('ansible.builtin.file', inventory_hostname ~ '-server.pem') }}"
+docker_tls_server_key: "{{ lookup('community.sops.sops', inventory_hostname ~ '-server.key.sops') }}"
+```
+
+- **Mutual TLS only.** dockerd lets in any client whose certificate chains to
+  `docker_tls_ca_cert` and gives it full control of the host: that CA must
+  sign nothing but the clients meant to have it.
+- **Hosts and TLS settings are flags of one drop-in**,
+  `/etc/systemd/system/docker.service.d/tls-listener.conf`:
+  `ExecStart=/usr/bin/dockerd --host=fd:// --host=tcp://… --tlsverify
+  --tlscacert=… --tlscert=… --tlskey=… --containerd=…`. dockerd accepts a TCP
+  host without TLS, so a listener must never exist without its settings;
+  splitting them between flags and `daemon.json` would allow exactly that
+  between two tasks. For the same reason `docker_daemon_config` may not hold
+  `hosts` or `tls*` keys (dockerd also refuses a setting given both ways).
+- **Order:** TLS files → `daemon.json` validated with these flags → live set
+  validated (TLS key pair included) → drop-in → restart. A failed validation
+  stops the run before the listener appears and before the restart.
+- **The way back** is `docker_tls_hosts: []`: the drop-in is removed first,
+  then `docker_tls_dir`, then the daemon restarts on its socket only.
+- The drop-in repeats the packaged unit's command line (docker-ce 29.x:
+  `-H fd:// --containerd=/run/containerd/containerd.sock`); check it when
+  moving the pins to a new major version.
+- The listener's address must exist when dockerd starts (`network-online.target`).
+
+Not here (yet): users and groups, other daemon flags outside `daemon.json`.

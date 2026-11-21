@@ -3,7 +3,9 @@
   ansible.builtin.apt:
     update_cache: true
 
+# daemon_reload: a changed drop-in takes effect only after systemd rereads it.
 - name: Restart docker
   ansible.builtin.systemd_service:
     name: docker
     state: restarted
+    daemon_reload: true

@@ -22,3 +22,15 @@ docker_repo_architectures:
 docker_daemon_config:
   log-driver: local
   live-restore: true
+
+# The API on TCP with mutual TLS: each entry is a -H address, such as
+# tcp://192.168.50.2:2376. Empty: the daemon listens on its socket only, and
+# the role removes the listener's drop-in, TLS files and daemon.json settings.
+docker_tls_hosts: []
+# PEM contents, required with docker_tls_hosts: the CA whose clients are let
+# in (dockerd accepts any client certificate it signed), this host's
+# certificate and its private key.
+docker_tls_ca_cert: ""
+docker_tls_server_cert: ""
+docker_tls_server_key: ""
+docker_tls_dir: /etc/docker/tls

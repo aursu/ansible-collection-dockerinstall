@@ -1,6 +1,7 @@
 ---
 # Owned whole: the content is docker_daemon_config and nothing else. dockerd
-# validates the candidate before it replaces the live file.
+# validates the candidate together with the flags the unit will run it with
+# (hosts, TLS settings and key pair) before it replaces the live file.
 - name: Write /etc/docker/daemon.json
   ansible.builtin.copy:
     dest: /etc/docker/daemon.json
@@ -8,5 +9,14 @@
     owner: root
     group: root
     mode: "0644"
-    validate: dockerd --validate --config-file %s
+    validate: "dockerd --validate --config-file %s {{ docker_dockerd_flags | join(' ') }}"
   notify: Restart docker
+
+# A changed certificate or key alone does not touch daemon.json: check the
+# whole live set before the handler restarts the daemon with it. In check mode
+# nothing was written, so there is nothing new to check.
+- name: Validate the live configuration with the daemon's flags
+  ansible.builtin.command:
+    argv: "{{ ['dockerd', '--validate', '--config-file', '/etc/docker/daemon.json'] + docker_dockerd_flags }}"
+  changed_when: false
+  when: not ansible_check_mode
